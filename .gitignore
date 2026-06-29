@@ -1,0 +1,22 @@
+# Secrets
+.env
+
+# Model weights (downloaded via init-loras or download_loras.py)
+models/*.safetensors
+models/.cache/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+
+# IDE / local config
+.claude/
+
+# OS
+.DS_Store
+Thumbs.db
+branch_structure.json
+temp_auto_push.bat
+temp_interactive_push.bat

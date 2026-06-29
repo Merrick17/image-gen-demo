@@ -1,0 +1,50 @@
+services:
+
+  # ── Init: download all LoRA safetensors before the server starts ──────────
+  init-loras:
+    image: python:3.11-slim
+    volumes:
+      - ./models:/app/models
+      - ./scripts:/scripts
+    environment:
+      - MODELS_DIR=/app/models
+      - HF_TOKEN=${HF_TOKEN}
+    command: >
+      sh -c "pip install --quiet huggingface_hub &&
+             python /scripts/download_loras.py"
+
+  # ── SDXL inference server ─────────────────────────────────────────────────
+  sdxl:
+    build: .
+    depends_on:
+      init-loras:
+        condition: service_completed_successfully
+    ports:
+      - "8000:8000"
+    volumes:
+      - hf_cache:/root/.cache/huggingface  # SDXL base model weights (~7 GB)
+      - ./models:/app/models               # LoRAs from init-loras
+    environment:
+      - HF_TOKEN=${HF_TOKEN}
+
+      # ── Base model ──
+      - MODEL_ID=stabilityai/stable-diffusion-xl-base-1.0
+
+      # ── LCM fast inference (4 steps instead of 20-30) ──
+      - USE_LCM=true
+      - LCM_LORA_PATH=models/lcm_lora.safetensors
+      - NUM_STEPS=4
+      - GUIDANCE_SCALE=1.5
+
+      # ── Style LoRA ──
+      - LORA_PATH=models/photography.safetensors
+      - LORA_SCALE=0.8
+
+    deploy:
+      resources:
+        limits:
+          memory: 20g
+    restart: unless-stopped
+
+volumes:
+  hf_cache:
